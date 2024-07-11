@@ -1,6 +1,6 @@
 <?php
 
-namespace Repositories;
+namespace kha333n\crudmodule\Repositories;
 
 use Exceptions\ModalCannotBeDeleted;
 use Illuminate\Database\Eloquent\Model;
@@ -10,7 +10,7 @@ use Illuminate\Validation\ValidationException;
 
 class CrudRepository
 {
-    protected Model $model;
+    protected $model;
 
     public function __construct(Model $model)
     {
@@ -85,12 +85,12 @@ class CrudRepository
         Event::dispatch($eventName, $model);
     }
 
-    public function update(Model $model, array $data): Model
+    public function update(array $data): Model
     {
         $data = $this->validateData($data);
-        $model->update($data);
-        $this->triggerEvent('Updated', $model);
-        return $model;
+        $this->model->update($data);
+        $this->triggerEvent('Updated', $this->model);
+        return $this->model;
     }
 
     /**

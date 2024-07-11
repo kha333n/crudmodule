@@ -1,14 +1,20 @@
 <?php
 
-namespace Traits;
+namespace kha333n\crudmodule\Traits;
 
 
 use Illuminate\Support\Facades\App;
+use kha333n\crudmodule\Repositories\CrudRepository;
 
 trait Crudable
 {
-    public static function repository()
+    public static function newRepository()
     {
-        return App::makeWith('Repositories\CrudRepository', ['model' => self::class]);
+        return new CrudRepository(new self());
+    }
+
+    public function repository()
+    {
+        return new CrudRepository($this);
     }
 }

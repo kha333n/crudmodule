@@ -1,5 +1,7 @@
 <?php
 
+namespace kha333n\crudmodule\Contracts;
+
 interface CrudableInterface
 {
     /**
