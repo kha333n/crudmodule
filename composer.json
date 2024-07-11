@@ -1,0 +1,26 @@
+{
+    "name": "kha333n/crudmodule",
+    "description": "Basic CRUD Module for Laravel Models",
+    "type": "library",
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "Kha333n\\Crudmodule\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "kha333n",
+            "email": "kha333n@gmail.com"
+        }
+    ],
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Kha333n\\Crudmodule\\CrudServiceProvider"
+            ]
+        }
+    },
+    "minimum-stability": "stable",
+    "require": {}
+}
