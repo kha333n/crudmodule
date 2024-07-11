@@ -2,11 +2,11 @@
 
 namespace kha333n\crudmodule\Repositories;
 
-use Exceptions\ModalCannotBeDeleted;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
+use kha333n\crudmodule\Exceptions\ModalCannotBeDeleted;
 
 class CrudRepository
 {
@@ -97,28 +97,28 @@ class CrudRepository
      * <h3>For better control define a canDelete method in your model</h3>
      * @throws ModalCannotBeDeleted
      */
-    public function delete(Model $model): Model
+    public function delete(): bool
     {
-        if (method_exists($model, 'canDelete')) {
-            if ($model->canDelete()) {
-                return $this->deleteAndTriggerEvent($model);
+        if (method_exists($this->model, 'canDelete')) {
+            if ($this->model->canDelete()) {
+                return $this->deleteAndTriggerEvent($this->model);
             }
             throw new ModalCannotBeDeleted('Model cannot be deleted');
         }
-        return $this->deleteAndTriggerEvent($model);
+        return $this->deleteAndTriggerEvent();
     }
 
-    private function deleteAndTriggerEvent($model)
+    private function deleteAndTriggerEvent()
     {
-        $model->delete();
-        $this->triggerEvent('Deleted', $model);
-        return $model;
+        $this->triggerEvent('Deleted', $this->model);
+        $this->model->delete();
+        return true;
     }
 
-    public function forceDelete(Model $model): Model
+    public function forceDelete(): bool
     {
-        $model->forceDelete();
-        $this->triggerEvent('ForceDeleted', $model);
-        return $model;
+        $this->triggerEvent('ForceDeleted', $this->model);
+        $this->model->forceDelete();
+        return true;
     }
 }

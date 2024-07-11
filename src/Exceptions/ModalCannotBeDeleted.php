@@ -1,14 +1,13 @@
 <?php
 
-namespace Exceptions;
+namespace kha333n\crudmodule\Exceptions;
 
-use Exception;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 
-class ModalCannotBeDeleted extends Exception
+class ModalCannotBeDeleted extends HttpException
 {
-    //TODO: Implement this exception
-    public function __construct($message = "Model cannot be deleted.", $code = 0, Exception $previous = null)
+    public function __construct($message = "Model cannot be deleted.", $code = 422, \Throwable $previous = null, array $headers = [])
     {
-        parent::__construct($message, $code, $previous);
+        parent::__construct($code, $message, $previous, $headers);
     }
 }
