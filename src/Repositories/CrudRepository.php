@@ -2,11 +2,14 @@
 
 namespace kha333n\crudmodule\Repositories;
 
+use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\UnauthorizedException;
 use Illuminate\Validation\ValidationException;
-use kha333n\crudmodule\Exceptions\ModalCannotBeDeleted;
+use kha333n\crudmodule\Structures\CrudConfiguration;
 
 class CrudRepository
 {
@@ -17,13 +20,59 @@ class CrudRepository
         $this->model = $model;
     }
 
-    public function all()
+    public function find($id, $columns = ['*'], CrudConfiguration $configuration = null)
     {
-        return $this->model->all();
+        $model = $this->model;
+        if ($configuration) {
+            if ($configuration->withTrashed && $this->usesSoftDeletes()) {
+                $model = $model->withTrashed();
+            }
+        }
+        if (is_array($id) || $id instanceof Arrayable) {
+            return $model->findMany($id, $columns);
+        }
+
+        return $model->whereKey($id)->first($columns);
+    }
+
+    public function all(CrudConfiguration $configuration = null)
+    {
+        $this->authorize('viewAny');
+        $query = $this->model->defaultQuery();
+        if ($configuration) {
+            if ($this->usesSoftDeletes()) {
+                if ($configuration->withTrashed && !$configuration->onlyTrashed) $query = $query->withTrashed();
+                if ($configuration->onlyTrashed) $query = $query->onlyTrashed();
+            }
+
+            if ($configuration->paginate) {
+                return $query->paginate($configuration->perPage);
+            }
+        }
+        return $query->get();
+    }
+
+    protected function authorize($action, $model = null)
+    {
+        $model = $model ?: $this->model;
+
+        $funtion = 'can' . ucfirst($action);
+
+        if (!$model->$funtion($model)) {
+            throw new UnauthorizedException("Unauthorized action by custom method: {$action}");
+        }
+    }
+
+    public function usesSoftDeletes(): bool
+    {
+        return in_array(SoftDeletes::class, class_uses_recursive($this->model));
     }
 
     public function create(array $data)
     {
+
+
+        $this->authorize('create');
         $data = $this->validateData($data);
         $instance = $this->model->create($data);
         $this->triggerEvent('Created', $instance);
@@ -87,29 +136,17 @@ class CrudRepository
 
     public function update(array $data): Model
     {
+        $this->authorize('update', $this->model);
         $data = $this->validateData($data);
         $this->model->update($data);
         $this->triggerEvent('Updated', $this->model);
         return $this->model;
     }
 
-    /**
-     * <h3>For better control define a canDelete method in your model</h3>
-     * @throws ModalCannotBeDeleted
-     */
+
     public function delete(): bool
     {
-        if (method_exists($this->model, 'canDelete')) {
-            if ($this->model->canDelete()) {
-                return $this->deleteAndTriggerEvent($this->model);
-            }
-            throw new ModalCannotBeDeleted('Model cannot be deleted');
-        }
-        return $this->deleteAndTriggerEvent();
-    }
-
-    private function deleteAndTriggerEvent()
-    {
+        $this->authorize('delete', $this->model);
         $this->triggerEvent('Deleted', $this->model);
         $this->model->delete();
         return true;
@@ -117,8 +154,17 @@ class CrudRepository
 
     public function forceDelete(): bool
     {
+        $this->authorize('forceDelete', $this->model);
         $this->triggerEvent('ForceDeleted', $this->model);
         $this->model->forceDelete();
+        return true;
+    }
+
+    public function restore(): bool
+    {
+        $this->authorize('restore', $this->model);
+        $this->triggerEvent('Restored', $this->model);
+        $this->model->restore();
         return true;
     }
 }
