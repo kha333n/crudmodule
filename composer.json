@@ -5,7 +5,7 @@
     "license": "MIT",
     "autoload": {
         "psr-4": {
-            "Kha333n\\Crudmodule\\": "src/"
+            "kha333n\\crudmodule\\": "src/"
         }
     },
     "authors": [
@@ -17,10 +17,16 @@
     "extra": {
         "laravel": {
             "providers": [
-                "Kha333n\\Crudmodule\\CrudServiceProvider"
+                "kha333n\\crudmodule\\Providers\\CrudServiceProvider"
             ]
         }
     },
     "minimum-stability": "stable",
-    "require": {}
+    "require": {
+        "php": "^8.2",
+        "spatie/laravel-query-builder": "^6.0"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^8.5"
+    }
 }
