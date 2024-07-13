@@ -14,7 +14,7 @@ Route::group([
         Route::put('/{id}', [CrudController::class, 'update']);
         Route::delete('/{id}', [CrudController::class, 'destroy']);
         Route::delete('/{id}/force', [CrudController::class, 'forceDestroy']);
-        Route::post('/{id}/restore', [CrudController::class, 'restore']);
+        Route::patch('/{id}', [CrudController::class, 'restore']);
     });
 });
 
