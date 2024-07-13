@@ -2,13 +2,17 @@
 
 namespace kha333n\crudmodule\Repositories;
 
+use App\Models\Book;
+use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\UnauthorizedException;
 use Illuminate\Validation\ValidationException;
+use kha333n\crudmodule\Exceptions\ModelCannotBeLocked;
 use kha333n\crudmodule\Structures\CrudConfiguration;
 
 class CrudRepository
@@ -35,6 +39,16 @@ class CrudRepository
         return $model->whereKey($id)->first($columns);
     }
 
+    public function usesSoftDeletes(): bool
+    {
+        return in_array(SoftDeletes::class, class_uses_recursive($this->model));
+    }
+
+    public function setModel(Model $model)
+    {
+        $this->model = $model;
+    }
+
     public function all(CrudConfiguration $configuration = null)
     {
         $this->authorize('viewAny');
@@ -59,19 +73,12 @@ class CrudRepository
         $funtion = 'can' . ucfirst($action);
 
         if (!$model->$funtion($model)) {
-            throw new UnauthorizedException("Unauthorized action by custom method: {$action}");
+            throw new UnauthorizedException();
         }
-    }
-
-    public function usesSoftDeletes(): bool
-    {
-        return in_array(SoftDeletes::class, class_uses_recursive($this->model));
     }
 
     public function create(array $data)
     {
-
-
         $this->authorize('create');
         $data = $this->validateData($data);
         $instance = $this->model->create($data);
@@ -134,37 +141,75 @@ class CrudRepository
         Event::dispatch($eventName, $model);
     }
 
+    /**
+     * @throws LockTimeoutException
+     */
     public function update(array $data): Model
     {
         $this->authorize('update', $this->model);
-        $data = $this->validateData($data);
-        $this->model->update($data);
-        $this->triggerEvent('Updated', $this->model);
+        $this->lock($this->model->getTable() . ':' . $this->model->getKey(), function () use ($data) {
+            $data = $this->validateData($data);
+            $this->model->update($data);
+            $this->triggerEvent('Updated', $this->model);
+        });
         return $this->model;
     }
 
+    protected function lock(string $key, callable $callback)
+    {
+        $lock = Cache::lock($key, 10);
 
+        if ($lock->get()) {
+            try {
+                return $callback();
+            } finally {
+                $lock->release();
+            }
+        } else {
+            throw new LockTimeoutException();
+        }
+    }
+
+    /**
+     * @throws LockTimeoutException
+     */
     public function delete(): bool
     {
         $this->authorize('delete', $this->model);
-        $this->triggerEvent('Deleted', $this->model);
-        $this->model->delete();
+        $this->lock($this->model->getTable() . ':' . $this->model->getKey(), function () {
+            $this->model->delete();
+            $this->triggerEvent('Deleted', $this->model);
+        });
         return true;
     }
 
+    /**
+     * @throws LockTimeoutException
+     */
     public function forceDelete(): bool
     {
         $this->authorize('forceDelete', $this->model);
-        $this->triggerEvent('ForceDeleted', $this->model);
-        $this->model->forceDelete();
+        $this->lock($this->model->getTable() . ':' . $this->model->getKey(), function () {
+            $this->model->forceDelete();
+            $this->triggerEvent('ForceDeleted', $this->model);
+        });
         return true;
     }
 
+    /**
+     * @throws LockTimeoutException
+     */
     public function restore(): bool
     {
         $this->authorize('restore', $this->model);
-        $this->triggerEvent('Restored', $this->model);
-        $this->model->restore();
+        $this->lock($this->model->getTable() . ':' . $this->model->getKey(), function () {
+            if ($this->usesSoftDeletes()) {
+                $this->model->restore();
+                $this->triggerEvent('Restored', $this->model);
+            } else {
+                abort(404);
+            }
+        });
         return true;
     }
 }

@@ -20,7 +20,7 @@ class CrudConfiguration
         bool $withTrashed = false,
         bool $onlyTrashed = false,
         bool $paginate = false,
-        int  $perPage = 10,
+        int $perPage = 10
     )
     {
         $this->withTrashed = $withTrashed;
