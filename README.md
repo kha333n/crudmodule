@@ -307,7 +307,7 @@ class BookCreatedListener
 
 ## License
 
-MIT License. Please see the [License File](LICENSE.md) for more information.
+MIT License. Please see the [License File](LICENSE) for more information.
 
 ## Contributing
 
